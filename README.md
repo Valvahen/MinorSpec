@@ -73,4 +73,8 @@ Node 3 received vote from Node 1 for TX tx002
 Node 3 received vote from Node 2 for TX tx002
 ✅ Node 3: Quorum reached for TX tx002
 🧾 Node 3: Committing TX tx002
+
+>> Node 3 proposing TX tx005
+🛑 Transaction tx005 has invalid signature. Rejected.
+Node 3: TX tx005 failed validation.
 ```
