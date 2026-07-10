@@ -1,113 +1,142 @@
-# FobSim
-This project aims to introduce a reliable Fog-enhanced Blockchain simulation environment, namely FoBSim.
+# AQA-SplitBFT: Trust-Adaptive Participation Simulator
 
-This environment shall facilitate easy simulation for different Fog-Blockchain integration scenarios.
+A rigorously-tested discrete-event simulator for evaluating trust-adaptive
+Byzantine Fault-Tolerant (BFT) consensus in fog-based blockchain environments.
+This directory contains the complete implementation, test suite, experiments,
+and analysis accompanying the paper:
 
-FoBSim is implemented using Python 3.8, and it is adviced to be run on Linux or Windows OS.
+> *Trust-Adaptive Participation in Fog-Based SplitBFT: A Communication–Liveness Trade-off Study.*
 
-This research work is a part of a paper that is published in the PeerJ-Computer Science journal. The open-access paper can be found at:
+All results reported in the paper are reproducible from the scripts here.
 
-https://peerj.com/articles/cs-431/
+---
 
-DOI: 10.7717/peerj-cs.431
+## Overview
 
-Full tutorial on Youtube: https://youtube.com/playlist?list=PLpRuKQ4GtoaMnRw8J31a_2EuuCYpBQGxS
+The simulator compares three consensus variants under controlled fog-network
+conditions (variable size, adversarial load, and packet loss):
 
-IMPORTANT NOTE: Published code should be considered copyrighted whether or not it includes an explicit copyright notice. This means that no one can distribute, reproduce, display, or create derivative works of the software, for commercial purposes, without permission of the copyright owner. Nevertheless, permission is granted for reproducing and creating derivative works for noncommercial activities (e.g. Research), given that appropriate crediting is provided, and changes that were made were indicated. You may do so in any reasonable manner, but not in any way that suggests the licensor endorses you or your use.
+| Variant | Description |
+|---|---|
+| **SplitBFT** | Static baseline with fixed group quorums (`simulator/protocol_splitbft.py`) |
+| **AQA (threshold)** | Trust-adaptive quorum threshold (`simulator/protocol_aqa.py`) |
+| **Participation-AQA** | Trust-selected participant subset (`simulator/protocol_aqa_participation.py`) |
 
-# To run FoBSim using Docker:
-1-	Update apt-get:
+Node trust is computed from runtime telemetry — uptime, voting agreement,
+response time, and observed misbehaviour — not assigned randomly.
 
-Sudo apt-get update 
+---
 
-2-	Install Docker Desktop from:
+## Directory structure
 
-https://www.docker.com/get-started/
+```
+AQA/
+├── simulator/
+│   ├── node.py                      # Node model + telemetry-based trust
+│   ├── network.py                   # Latency, packet drop, partition, churn
+│   ├── adversary.py                 # Byzantine behaviours
+│   ├── base_protocol.py             # Shared PBFT-style consensus core
+│   ├── protocol_splitbft.py         # Static baseline
+│   ├── protocol_aqa.py              # Adaptive quorum-threshold variant
+│   ├── protocol_aqa_participation.py# Adaptive participation variant
+│   └── metrics.py                   # Metrics + CSV export
+├── tests/                           # 37-test validation suite (pytest)
+├── analysis/                        # Statistics + figure generation
+├── results/                         # Generated CSVs and figures
+├── main.py                          # Full experiment-matrix runner
+└── requirements.txt
+```
 
-(for ubunto: sudo apt install docker.io)
+---
 
-3-	Check the version of the Docker installation:
+## Installation
 
-docker -v
+Requires Python 3.10+.
 
-4-	Clone the FoBSim repository
+```bash
+cd AQA
+pip install -r requirements.txt
+```
 
-5-	Go to the FoBSim Directory in the command line and build the docker image:
+Dependencies: `numpy`, `pandas`, `scipy`, `matplotlib`, `pytest`, `tqdm`.
 
-sudo docker build -t fobsim .
+---
 
-6-	Start the FoBSim container by typing:
+## Reproducing the paper's results
 
-sudo docker run -it fobsim
+All experiments are seed-controlled and deterministic.
 
-# To run FoBSim without Docker:
+**1. Run the validation test suite (37 tests):**
+```bash
+pytest -v
+```
 
-1- update installer: sudo apt-get update
+**2. Reproduce the main message-reduction result (Table 1):**
+```bash
+python analysis/confirm_reduction.py
+```
 
-2- install git: sudo apt-get install git-all
+**3. Reproduce the communication–liveness trade-off (Table 2, Figure 2):**
+```bash
+python analysis/verify_boundary.py
+```
 
-3- clone FoBSim: git clone https://github.com/sed-szeged/FobSim.git
+**4. Reproduce the trust-vs-random comparison (Table 3):**
+```bash
+python analysis/trust_vs_random.py
+python analysis/trust_gap_check.py     # Wilcoxon significance test
+```
 
-4- install pip: sudo apt install python3-pip
+**5. Generate publication figures:**
+```bash
+python analysis/make_figures.py        # outputs to results/figures/
+```
 
-5- install rsa: pip install rsa
+**6. (Optional) Run the full experiment matrix:**
+```bash
+python main.py results/runs.csv
+```
 
-6- run: python3 main.py
+---
 
-# The components implemented in FoBSim contains:
-1- Fog layer implementation.
+## Validation
 
-2- Blockchain network Implementation.
+The simulator is validated by 37 automated tests covering:
 
-3- End-User layer implemetation.
+- **Trust model** — bounds, sliding-window behaviour, telemetry aggregation
+- **Network model** — latency floors, drop-rate accuracy, partitions, churn
+- **Adversaries** — crash, equivocation, dishonest trust reporting, slow-response
+- **Protocol safety** — quorum never below 2f+1, no double finalisation
+- **Message accounting** — verified against manual counts and O(n²) scaling
+- **Reproducibility** — identical output under identical seeds
 
-4- Consensus algorithms.
+Run `pytest -v` to execute the full suite.
 
-5- Incentivization Mechanisms.
+---
 
-6- Parallel Mining.
+## Key findings (summary)
 
-7- Gossip Protocol.
+1. Adapting the **quorum threshold** yields no benefit — a 2f+1 quorum already
+   saturates Byzantine tolerance.
+2. Adapting **participation** reduces communication by ~48% while preserving
+   safety and liveness in near-stable networks.
+3. **Trust-based** selection reduces adversarial overhead by a further ~10%
+   versus random selection (Wilcoxon, p < 10⁻⁹).
+4. The benefit is **fragile**: liveness collapses beyond ~1–2% packet loss.
 
-8- Easy network topology and unique identities management.
+---
 
-# FoBSim allows the placement of the Blockchain network in either:
-1- The Fog layer.
+## Notes
 
-2- The End-User layer.
+- This `AQA/` directory contains the current, paper-accurate implementation.
+  Earlier exploratory code elsewhere in the repository is superseded by this work.
+- Latency is modelled as communication volume; wall-clock latency analysis on a
+  physical deployment is left to future work.
 
-# The Blockchain in FoBSim provides the following services/immutable distributed ledgers:
-1- Payment/Trading
+---
 
-2- Data management
+## Citation
 
-3- Identity management
-
-4- Computational Services through Smart Contracts
-
-# The Blockchain in FoBSim allows the use of one of the following Consensus algorithms during each run:
-1- Proof-of-Work (PoW)
-
-2- Proof-of-Stake (PoS)
-
-3- Proof-of-Authority (PoA)
-
-4- NEW: Proof-of-Elapsed-Time (PoET)
-
-5- NEW: delegated Proof-of-Stack (dPoS)
-
-# Running FoBSim simulation:
-After you clone the repository as clarified above, modify the 'Sim_parameters.json' either directly or on the command line (using e.g. vim or nano tools)
-
-# Steps to add a new consensus algorithm (proof-based):
-0- You must be familiar with Python language.
-
-1- in the 'new_consensus_module.py', there are two groups of functions: Modifiable and Non-Modifiable (declared by comments).
-
-2- in the Modifiable part, follow the seven steps declared in the comments. Make sure to add instead of modify on the modifiable part. Thus, other code related to other consensus algorithms is not affected.
-
-3- As an example, we added a 'dummy consensus algorithm' which clarifies the main parts that should be added for a new proof-based algorithm. You can perform the same steps. 
-
-4- Additional functionalities can be added "if necessary" to any other module in the tool so that the proposed consensus algorithm works smoothly. For example, we added some conditional statements related to PoET to the 'build_block' method in the 'miner.py' file, and we added a 'PoET_server.py' (which includes only one method only) to forbid any confusions. However, we could simply add this method to the 'new_consensus_module.py'. Read the functions of all the available 5 consensus algorithms so that you get your self familiar of how a proof-based algorithm works.
-
-5- run the FoBSim tool after modifying on the 'Sim_parameters.json' file as required by your simulation scenario (steps 3 and 4 above ^^)
+If you use this simulator, please cite the accompanying paper (details to be
+added upon publication).
+```
