@@ -1,1 +1,0 @@
-"""AQA-Sim package."""
