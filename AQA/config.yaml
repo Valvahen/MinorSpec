@@ -1,0 +1,16 @@
+n_nodes: [100]
+byzantine_fraction: [0.1, 0.2, 0.3]
+packet_drop: [0.01, 0.05]
+n_repeats: 30
+base_seed: 20260708
+protocols: [splitbft, aqa]
+
+# Optional knobs
+n_rounds: 50
+n_groups: 4
+n_miners: 100
+q_min: 3
+q_max: 25
+churn_p_leave: 0.0
+churn_p_join: 0.0
+n_workers: 4
